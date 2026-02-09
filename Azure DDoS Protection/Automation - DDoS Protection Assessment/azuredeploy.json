@@ -211,7 +211,7 @@
         "logVerbose": false,
         "description": "Assesses Azure DDoS Protection status across all Public IPs and sends results to Log Analytics",
         "publishContentLink": {
-          "uri": "https://raw.githubusercontent.com/Azure/Azure-Network-Security/master/Azure%20DDoS%20Protection/Automation%20-%20DDoS%20Protection%20Assessment/scripts/Check-DDoSProtection-LogAnalytics.ps1",
+          "uri": "https://raw.githubusercontent.com/SaleemBseeu/Azure-Network-Security/feature/ddos-protection-assessment/Azure%20DDoS%20Protection/Automation%20-%20DDoS%20Protection%20Assessment/scripts/Check-DDoSProtection-LogAnalytics.ps1",
           "version": "1.0.0.0"
         }
       }

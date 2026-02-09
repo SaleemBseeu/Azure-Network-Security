@@ -49,7 +49,7 @@ Automated solution that continuously assesses Azure DDoS Protection status acros
 
 ### Option 1: Deploy to Azure Button
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2FAzure-Network-Security%2Fmaster%2FAzure%2520DDoS%2520Protection%2FAutomation%2520-%2520DDoS%2520Protection%2520Assessment%2Fazuredeploy.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2FAzure-Network-Security%2Fmaster%2FAzure%2520DDoS%2520Protection%2FAutomation%2520-%2520DDoS%2520Protection%2520Assessment%2FcreateUiDefinition.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FSaleemBseeu%2FAzure-Network-Security%2Ffeature%2Fddos-protection-assessment%2FAzure%2520DDoS%2520Protection%2FAutomation%2520-%2520DDoS%2520Protection%2520Assessment%2Fazuredeploy.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2FSaleemBseeu%2FAzure-Network-Security%2Ffeature%2Fddos-protection-assessment%2FAzure%2520DDoS%2520Protection%2FAutomation%2520-%2520DDoS%2520Protection%2520Assessment%2FcreateUiDefinition.json)
 
 ### Option 2: Azure CLI
 
