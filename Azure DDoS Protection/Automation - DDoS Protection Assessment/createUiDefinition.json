@@ -1,0 +1,137 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.MultiVm.json#",
+  "handler": "Microsoft.Azure.CreateUIDef",
+  "version": "0.1.2-preview",
+  "parameters": {
+    "config": {
+      "isWizard": true,
+      "basics": {
+        "description": "## Azure DDoS Protection Assessment\n\nThis solution deploys an automated assessment of Azure DDoS Protection status across your Azure environment.\n\n### What gets deployed:\n- **Azure Automation Account** with Managed Identity\n- **Log Analytics Workspace** for storing results\n- **PowerShell Runbook** that scans all Public IPs\n- **Scheduled job** to run the assessment automatically\n\n### Prerequisites:\n- Owner or User Access Administrator role to grant permissions\n- Reader access to subscriptions you want to scan",
+        "location": {
+          "label": "Location",
+          "resourceTypes": [
+            "Microsoft.Automation/automationAccounts",
+            "Microsoft.OperationalInsights/workspaces"
+          ]
+        }
+      }
+    },
+    "basics": [],
+    "steps": [
+      {
+        "name": "automationConfig",
+        "label": "Automation Settings",
+        "elements": [
+          {
+            "name": "automationAccountName",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Automation Account Name",
+            "defaultValue": "aa-ddos-assessment",
+            "toolTip": "Name for the Azure Automation Account",
+            "constraints": {
+              "required": true,
+              "regex": "^[a-zA-Z][a-zA-Z0-9-]{4,48}[a-zA-Z0-9]$",
+              "validationMessage": "Must be 6-50 characters, start with a letter, and contain only letters, numbers, and hyphens"
+            }
+          },
+          {
+            "name": "logAnalyticsWorkspaceName",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Log Analytics Workspace Name",
+            "defaultValue": "law-ddos-assessment",
+            "toolTip": "Name for the Log Analytics Workspace where results will be stored",
+            "constraints": {
+              "required": true,
+              "regex": "^[a-zA-Z][a-zA-Z0-9-]{2,61}[a-zA-Z0-9]$",
+              "validationMessage": "Must be 4-63 characters, start with a letter, and contain only letters, numbers, and hyphens"
+            }
+          }
+        ]
+      },
+      {
+        "name": "scheduleConfig",
+        "label": "Schedule Settings",
+        "elements": [
+          {
+            "name": "scheduleInfo",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": true,
+            "options": {
+              "icon": "Info",
+              "text": "Configure how often the DDoS Protection assessment should run. Daily is recommended for most environments."
+            }
+          },
+          {
+            "name": "scheduleFrequency",
+            "type": "Microsoft.Common.DropDown",
+            "label": "Schedule Frequency",
+            "defaultValue": "Daily",
+            "toolTip": "How often to run the assessment",
+            "constraints": {
+              "required": true,
+              "allowedValues": [
+                {
+                  "label": "Hourly",
+                  "value": "Hour"
+                },
+                {
+                  "label": "Daily",
+                  "value": "Day"
+                },
+                {
+                  "label": "Weekly",
+                  "value": "Week"
+                }
+              ]
+            }
+          },
+          {
+            "name": "scheduleInterval",
+            "type": "Microsoft.Common.Slider",
+            "min": 1,
+            "max": 24,
+            "label": "Interval",
+            "defaultValue": 1,
+            "showStepMarkers": false,
+            "toolTip": "Run every N hours/days/weeks"
+          }
+        ]
+      },
+      {
+        "name": "subscriptionConfig",
+        "label": "Subscription Scope",
+        "elements": [
+          {
+            "name": "scopeInfo",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": true,
+            "options": {
+              "icon": "Warning",
+              "text": "The Automation Account's Managed Identity will be granted Reader role on this subscription. To scan additional subscriptions, you must manually grant Reader role to the Managed Identity after deployment."
+            }
+          },
+          {
+            "name": "subscriptionIdsToScan",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Subscription IDs to Scan (Optional)",
+            "defaultValue": "",
+            "toolTip": "Leave empty to scan all accessible subscriptions. Or enter comma-separated subscription IDs to limit scope.",
+            "constraints": {
+              "required": false,
+              "regex": "^$|^([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})(,\\s*[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})*$",
+              "validationMessage": "Enter valid subscription IDs separated by commas, or leave empty"
+            }
+          }
+        ]
+      }
+    ],
+    "outputs": {
+      "location": "[location()]",
+      "automationAccountName": "[steps('automationConfig').automationAccountName]",
+      "logAnalyticsWorkspaceName": "[steps('automationConfig').logAnalyticsWorkspaceName]",
+      "scheduleFrequency": "[steps('scheduleConfig').scheduleFrequency]",
+      "scheduleInterval": "[steps('scheduleConfig').scheduleInterval]",
+      "subscriptionIdsToScan": "[steps('subscriptionConfig').subscriptionIdsToScan]"
+    }
+  }
+}

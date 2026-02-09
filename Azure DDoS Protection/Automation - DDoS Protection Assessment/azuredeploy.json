@@ -1,0 +1,302 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Deploys an automated Azure DDoS Protection Assessment solution with Azure Automation, Log Analytics, and optional Grafana dashboard."
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources"
+      }
+    },
+    "automationAccountName": {
+      "type": "string",
+      "defaultValue": "aa-ddos-assessment",
+      "metadata": {
+        "description": "Name of the Azure Automation Account"
+      }
+    },
+    "logAnalyticsWorkspaceName": {
+      "type": "string",
+      "defaultValue": "law-ddos-assessment",
+      "metadata": {
+        "description": "Name of the Log Analytics Workspace"
+      }
+    },
+    "scheduleFrequency": {
+      "type": "string",
+      "defaultValue": "Day",
+      "allowedValues": [
+        "Day",
+        "Week",
+        "Hour"
+      ],
+      "metadata": {
+        "description": "How often to run the assessment"
+      }
+    },
+    "scheduleInterval": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": {
+        "description": "Interval for the schedule (e.g., 1 = every 1 day)"
+      }
+    },
+    "scheduleStartTime": {
+      "type": "string",
+      "defaultValue": "[dateTimeAdd(utcNow(), 'PT1H')]",
+      "metadata": {
+        "description": "Start time for the schedule (ISO 8601 format)"
+      }
+    },
+    "subscriptionIdsToScan": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Comma-separated list of subscription IDs to scan. Leave empty to scan all accessible subscriptions."
+      }
+    }
+  },
+  "variables": {
+    "runbookName": "Check-DDoSProtection",
+    "scheduleName": "DDoSAssessmentSchedule",
+    "jobScheduleName": "[guid(variables('runbookName'), variables('scheduleName'))]",
+    "readerRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
+    "logAnalyticsContributorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '92aaf0da-9dab-42b6-94a3-d43ce8d16293')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2022-10-01",
+      "name": "[parameters('logAnalyticsWorkspaceName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "sku": {
+          "name": "PerGB2018"
+        },
+        "retentionInDays": 90,
+        "features": {
+          "enableLogAccessUsingOnlyResourcePermissions": true
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Automation/automationAccounts",
+      "apiVersion": "2023-11-01",
+      "name": "[parameters('automationAccountName')]",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "sku": {
+          "name": "Basic"
+        },
+        "publicNetworkAccess": true
+      }
+    },
+    {
+      "type": "Microsoft.Automation/automationAccounts/modules",
+      "apiVersion": "2023-11-01",
+      "name": "[concat(parameters('automationAccountName'), '/Az.Accounts')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]"
+      ],
+      "properties": {
+        "contentLink": {
+          "uri": "https://www.powershellgallery.com/api/v2/package/Az.Accounts"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Automation/automationAccounts/modules",
+      "apiVersion": "2023-11-01",
+      "name": "[concat(parameters('automationAccountName'), '/Az.Network')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]",
+        "[resourceId('Microsoft.Automation/automationAccounts/modules', parameters('automationAccountName'), 'Az.Accounts')]"
+      ],
+      "properties": {
+        "contentLink": {
+          "uri": "https://www.powershellgallery.com/api/v2/package/Az.Network"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Automation/automationAccounts/modules",
+      "apiVersion": "2023-11-01",
+      "name": "[concat(parameters('automationAccountName'), '/Az.Monitor')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]",
+        "[resourceId('Microsoft.Automation/automationAccounts/modules', parameters('automationAccountName'), 'Az.Accounts')]"
+      ],
+      "properties": {
+        "contentLink": {
+          "uri": "https://www.powershellgallery.com/api/v2/package/Az.Monitor"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Automation/automationAccounts/modules",
+      "apiVersion": "2023-11-01",
+      "name": "[concat(parameters('automationAccountName'), '/Az.OperationalInsights')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]",
+        "[resourceId('Microsoft.Automation/automationAccounts/modules', parameters('automationAccountName'), 'Az.Accounts')]"
+      ],
+      "properties": {
+        "contentLink": {
+          "uri": "https://www.powershellgallery.com/api/v2/package/Az.OperationalInsights"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Automation/automationAccounts/variables",
+      "apiVersion": "2023-11-01",
+      "name": "[concat(parameters('automationAccountName'), '/LogAnalyticsWorkspaceId')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]",
+        "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
+      ],
+      "properties": {
+        "value": "[concat('\"', reference(resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))).customerId, '\"')]",
+        "isEncrypted": false,
+        "description": "Log Analytics Workspace ID"
+      }
+    },
+    {
+      "type": "Microsoft.Automation/automationAccounts/variables",
+      "apiVersion": "2023-11-01",
+      "name": "[concat(parameters('automationAccountName'), '/LogAnalyticsWorkspaceKey')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]",
+        "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
+      ],
+      "properties": {
+        "value": "[concat('\"', listKeys(resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName')), '2022-10-01').primarySharedKey, '\"')]",
+        "isEncrypted": true,
+        "description": "Log Analytics Workspace Primary Key"
+      }
+    },
+    {
+      "type": "Microsoft.Automation/automationAccounts/variables",
+      "apiVersion": "2023-11-01",
+      "name": "[concat(parameters('automationAccountName'), '/SubscriptionIdsToScan')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]"
+      ],
+      "properties": {
+        "value": "[concat('\"', parameters('subscriptionIdsToScan'), '\"')]",
+        "isEncrypted": false,
+        "description": "Comma-separated subscription IDs to scan (empty = all)"
+      }
+    },
+    {
+      "type": "Microsoft.Automation/automationAccounts/runbooks",
+      "apiVersion": "2023-11-01",
+      "name": "[concat(parameters('automationAccountName'), '/', variables('runbookName'))]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]",
+        "[resourceId('Microsoft.Automation/automationAccounts/modules', parameters('automationAccountName'), 'Az.Network')]",
+        "[resourceId('Microsoft.Automation/automationAccounts/modules', parameters('automationAccountName'), 'Az.Monitor')]",
+        "[resourceId('Microsoft.Automation/automationAccounts/modules', parameters('automationAccountName'), 'Az.OperationalInsights')]"
+      ],
+      "properties": {
+        "runbookType": "PowerShell",
+        "logProgress": true,
+        "logVerbose": false,
+        "description": "Assesses Azure DDoS Protection status across all Public IPs and sends results to Log Analytics",
+        "publishContentLink": {
+          "uri": "https://raw.githubusercontent.com/Azure/Azure-Network-Security/master/Azure%20DDoS%20Protection/Automation%20-%20DDoS%20Protection%20Assessment/scripts/Check-DDoSProtection-LogAnalytics.ps1",
+          "version": "1.0.0.0"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Automation/automationAccounts/schedules",
+      "apiVersion": "2023-11-01",
+      "name": "[concat(parameters('automationAccountName'), '/', variables('scheduleName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]"
+      ],
+      "properties": {
+        "startTime": "[parameters('scheduleStartTime')]",
+        "frequency": "[parameters('scheduleFrequency')]",
+        "interval": "[parameters('scheduleInterval')]",
+        "timeZone": "UTC",
+        "description": "Schedule for DDoS Protection Assessment"
+      }
+    },
+    {
+      "type": "Microsoft.Automation/automationAccounts/jobSchedules",
+      "apiVersion": "2023-11-01",
+      "name": "[concat(parameters('automationAccountName'), '/', variables('jobScheduleName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Automation/automationAccounts/runbooks', parameters('automationAccountName'), variables('runbookName'))]",
+        "[resourceId('Microsoft.Automation/automationAccounts/schedules', parameters('automationAccountName'), variables('scheduleName'))]"
+      ],
+      "properties": {
+        "runbook": {
+          "name": "[variables('runbookName')]"
+        },
+        "schedule": {
+          "name": "[variables('scheduleName')]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[guid(subscription().id, parameters('automationAccountName'), 'Reader')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]"
+      ],
+      "properties": {
+        "roleDefinitionId": "[variables('readerRoleDefinitionId')]",
+        "principalId": "[reference(resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName')), '2023-11-01', 'Full').identity.principalId]",
+        "principalType": "ServicePrincipal"
+      }
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[guid(resourceGroup().id, parameters('automationAccountName'), 'LogAnalyticsContributor')]",
+      "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]",
+        "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
+      ],
+      "properties": {
+        "roleDefinitionId": "[variables('logAnalyticsContributorRoleId')]",
+        "principalId": "[reference(resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName')), '2023-11-01', 'Full').identity.principalId]",
+        "principalType": "ServicePrincipal"
+      }
+    }
+  ],
+  "outputs": {
+    "automationAccountName": {
+      "type": "string",
+      "value": "[parameters('automationAccountName')]"
+    },
+    "automationAccountPrincipalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName')), '2023-11-01', 'Full').identity.principalId]"
+    },
+    "logAnalyticsWorkspaceId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))).customerId]"
+    },
+    "logAnalyticsWorkspaceResourceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
+    },
+    "importantNote": {
+      "type": "string",
+      "value": "IMPORTANT: The Automation Account has Reader role on THIS subscription only. To scan other subscriptions, grant Reader role to the Managed Identity on those subscriptions."
+    }
+  }
+}
