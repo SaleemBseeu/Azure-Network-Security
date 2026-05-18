@@ -1,6 +1,6 @@
 # Azure WAF Triage Solution
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2FAzure-Network-Security%2Fmain%2FAzure%20WAF%2FWAF%20Triage%20Solution%2Fazuredeploy.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FSaleemBseeu%2FAzure-Network-Security%2Fmaster%2FAzure%20WAF%2FWAF%20Triage%20Solution%2Fazuredeploy.json)
 
 > **Disclaimer:** This solution is provided **as-is** with no warranty or support. It is a community sample, not an official Microsoft product or service. Use it at your own risk.
 >
